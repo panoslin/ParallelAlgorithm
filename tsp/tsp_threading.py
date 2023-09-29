@@ -2,12 +2,15 @@
 # -*- coding: utf-8 -*-
 # Created by panos on 9/28/23
 # IDE: PyCharm
+import concurrent.futures
 from collections import defaultdict
 from functools import cache
 from typing import List, Dict, Tuple
+import os
+import math
 
 
-class TSP:
+class TSPThreading:
     """
     Reference from https://github.com/fillipe-gsm/python-tsp/blob/master/python_tsp/exact/dynamic_programming.py
     Travelling Salesman Problem
@@ -15,13 +18,21 @@ class TSP:
     TC: 2 ** n * n ** 2
     SC: 2 ** n * n
     """
-    # adjacent matrix
-    weights = None
-    path: Dict[Tuple, int] = {}
 
-    def travel(self, weights: List[List[int]]):
-        taken = frozenset(range(1, len(weights)))
+    def __init__(self, weights: List[List[int]]):
+        # adjacent matrix
         self.weights = weights
+        self.path: Dict[Tuple, int] = {}
+        self.thread_count = math.factorial(len(weights))
+        self.executor: concurrent.futures.Executor = None
+
+    def run(self):
+        with concurrent.futures.ThreadPoolExecutor(max_workers=self.thread_count) as executor:
+            self.executor = executor
+            return self.travel()
+
+    def travel(self):
+        taken = frozenset(range(1, len(self.weights)))
 
         # Step 1: get minimum distance
         best_distance = self.dist(0, taken)
@@ -37,17 +48,30 @@ class TSP:
         return best_path, best_distance
 
     @cache
-    def dist(self, current_node: int, taken: frozenset) -> float:
-        if not taken:
+    def dist(self, current_node: int, remaining_nodes: frozenset) -> float:
+        if not remaining_nodes:
             return self.weights[current_node][0]
 
         # Store the costs in the form (neighbor, dist(neighbor, taken))
-        costs = [
-            (neighbor, self.weights[current_node][neighbor] + self.dist(neighbor, taken.difference({neighbor})))
-            for neighbor in taken
-        ]
+        costs = []
+        # Start the load operations and mark each future with its parameters
+        future_to_idx = {
+            self.executor.submit(
+                self.dist,
+                current_node=neighbor,
+                remaining_nodes=remaining_nodes.difference({neighbor})
+            ): (neighbor, self.weights[current_node][neighbor])
+            for neighbor in remaining_nodes
+        }
+        for future in concurrent.futures.as_completed(future_to_idx):
+            neighbor, weight = future_to_idx[future]
+            try:
+                costs.append((neighbor, weight + future.result()))
+            except Exception as exc:
+                print(f'{neighbor}, {weight} generated an exception: {exc}')
+
         optimal_neighbor, min_cost = min(costs, key=lambda x: x[1])
-        self.path[(current_node, taken)] = optimal_neighbor
+        self.path[(current_node, remaining_nodes)] = optimal_neighbor
 
         return min_cost
 
@@ -67,8 +91,8 @@ if __name__ == '__main__':
           [8, 17, 15, 16, 16, 16, 19, 19, 0, 18, 20], [10, 17, 11, 16, 16, 16, 19, 19, 16, 0, 5],
           [10, 17, 6, 16, 16, 16, 19, 18, 16, 18, 0]], 92)
     ]:
-        tsp = TSP()
-        y = tsp.travel(tc)
+        tsp = TSPThreading(tc)
+        y = tsp.run()
         print(y)
         # print(tsp.get_path())
 
