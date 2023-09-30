@@ -19,7 +19,7 @@ class TSP:
     weights = None
     path: Dict[Tuple, int] = {}
 
-    def travel(self, weightså):
+    def travel(self, weights: List[List[int]]):
         taken = frozenset(range(1, len(weights)))
         self.weights = weights
 
