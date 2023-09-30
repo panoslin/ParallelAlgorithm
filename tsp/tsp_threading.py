@@ -68,7 +68,7 @@ class TSP:
         if mask + 1 == 1 << n:
             for i in range(n):
                 # go back to start node
-                dp[-1][i] = (
+                dp[mask][i] = (
                     dp[-1][i][0] + self.weights[i][start_node],
                     dp[-1][i][1]
                 )
