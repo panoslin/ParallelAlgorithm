@@ -19,7 +19,7 @@ class TSP:
     weights = None
     path: Dict[Tuple, int] = {}
 
-    def travel(self, weights: List[List[int]]):
+    def travel(self, weightså):
         taken = frozenset(range(1, len(weights)))
         self.weights = weights
 
@@ -34,7 +34,7 @@ class TSP:
             best_path.append(current_node)
             taken = taken.difference({current_node})
 
-        return best_path, best_distance
+        return best_distance, best_path
 
     @cache
     def dist(self, current_node: int, taken: frozenset) -> float:
@@ -60,4 +60,4 @@ if __name__ == '__main__':
         print(y)
         # print(tsp.get_path())
 
-        assert expected == y[1]
+        assert expected == y[0]
