@@ -3,16 +3,14 @@
 # Created by panos on 9/28/23
 # IDE: PyCharm
 import concurrent.futures
-from collections import defaultdict
-from functools import cache
-from typing import List, Dict, Tuple
 import os
-import math
+from itertools import permutations
+from typing import List, Tuple
 
 
-class TSPThreading:
+class TSP:
     """
-    Reference from https://github.com/fillipe-gsm/python-tsp/blob/master/python_tsp/exact/dynamic_programming.py
+    Reference from https://leetcode.com/discuss/general-discussion/1125779
     Travelling Salesman Problem
     Solve by DP in
     TC: 2 ** n * n ** 2
@@ -20,101 +18,68 @@ class TSPThreading:
     """
 
     def __init__(self, weights: List[List[int]]):
-        # adjacent matrix
         self.weights = weights
-        self.path: Dict[Tuple, int] = {}
-        self.thread_count = math.factorial(len(weights))
-        self.executor: concurrent.futures.Executor = None
-
-    def run(self):
-        with concurrent.futures.ThreadPoolExecutor(max_workers=self.thread_count) as executor:
-            self.executor = executor
-            return self.travel()
+        self.thread_count = os.cpu_count()
 
     def travel(self):
-        taken = frozenset(range(1, len(self.weights)))
+        with concurrent.futures.ThreadPoolExecutor(max_workers=self.thread_count) as executor:
+            start_node = 0
+            n = len(self.weights)
+            # dp[state][node]
+            # minimal cost/path given state and previous visited node
+            dp: List[List[Tuple[float, List]]] = [
+                [(float('inf'), [])] * n
+                for _ in range(1 << n)
+            ]
+            for i in range(n):
+                # first node taken
+                # should be after a start node
+                dp[1 << i][i] = (self.weights[start_node][i], [i])
 
-        # Step 1: get minimum distance
-        best_distance = self.dist(0, taken)
+            # Start the load operations and mark each future with its parameters
+            future_to_idx = {
+                executor.submit(
+                    self.helper,
+                    n=n,
+                    mask=mask,
+                    dp=dp,
+                    start_node=start_node
+                ): mask
+                for mask in range(1 << n)
+            }
+            concurrent.futures.wait(future_to_idx)
 
-        # Step 2: get path with the minimum distance
-        current_node = 0  # start at the origin
-        best_path = [0]
-        while taken:
-            current_node = self.path[(current_node, taken)]
-            best_path.append(current_node)
-            taken = taken.difference({current_node})
+            return dp[-1][0]
 
-        return best_path, best_distance
+    def helper(self, n, mask, dp, start_node):
+        nodes_to_be_visited = [j for j in range(n) if mask & (1 << j)]
+        for dest, src in permutations(nodes_to_be_visited, 2):
+            state_dest_not_visited = mask ^ (1 << dest)
+            dp[mask][dest] = min(
+                dp[mask][dest],
+                (
+                    dp[state_dest_not_visited][src][0] + self.weights[src][dest],
+                    dp[state_dest_not_visited][src][1] + [dest]
+                ),
+                key=lambda x: x[0]
+            )
 
-    @cache
-    def dist(self, current_node: int, remaining_nodes: frozenset) -> float:
-        if not remaining_nodes:
-            return self.weights[current_node][0]
-
-        # Store the costs in the form (neighbor, dist(neighbor, taken))
-        costs = []
-        # Start the load operations and mark each future with its parameters
-        future_to_idx = {
-            self.executor.submit(
-                self.dist,
-                current_node=neighbor,
-                remaining_nodes=remaining_nodes.difference({neighbor})
-            ): (neighbor, self.weights[current_node][neighbor])
-            for neighbor in remaining_nodes
-        }
-        for future in concurrent.futures.as_completed(future_to_idx):
-            neighbor, weight = future_to_idx[future]
-            try:
-                costs.append((neighbor, weight + future.result()))
-            except Exception as exc:
-                print(f'{neighbor}, {weight} generated an exception: {exc}')
-
-        optimal_neighbor, min_cost = min(costs, key=lambda x: x[1])
-        self.path[(current_node, remaining_nodes)] = optimal_neighbor
-
-        return min_cost
+        # reach to the last node
+        if mask + 1 == 1 << n:
+            for i in range(n):
+                # go back to start node
+                dp[-1][i] = (
+                    dp[-1][i][0] + self.weights[i][start_node],
+                    dp[-1][i][1]
+                )
 
 
 if __name__ == '__main__':
+    from testcases import testcases
 
-    for tc, expected in [
-        ([[0, 5, 8], [4, 0, 8], [4, 5, 0]], 17),
-        ([[10000.0, 10000.0, 10000.0, 8.0, 10000.0, 10.0], [10000.0, 10000.0, 10000.0, 10000.0, 2.0, 12.0],
-          [10000.0, 10000.0, 10000.0, 6.0, 4.0, 10000.0], [8.0, 10000.0, 6.0, 10000.0, 10000.0, 10000.0],
-          [10000.0, 2.0, 4.0, 10000.0, 10000.0, 10000.0], [10.0, 12.0, 10000.0, 10000.0, 10000.0, 10000.0]], 42),
-        ([[0, 6, 3, 4, 4], [4, 0, 4, 3, 7], [4, 3, 0, 4, 6], [2, 6, 4, 0, 6], [3, 5, 4, 4, 0]], 16),
-        ([[0, 17, 15, 16, 16, 15, 19, 19, 16, 18, 20], [10, 0, 15, 16, 15, 12, 19, 19, 16, 18, 20],
-          [10, 17, 0, 16, 16, 16, 19, 19, 16, 18, 20], [10, 17, 14, 0, 16, 16, 19, 19, 16, 3, 8],
-          [10, 17, 15, 1, 0, 16, 19, 19, 16, 4, 9], [10, 17, 15, 16, 16, 0, 19, 19, 6, 18, 20],
-          [10, 17, 15, 3, 2, 16, 0, 19, 15, 6, 11], [10, 11, 15, 16, 15, 16, 19, 0, 16, 18, 20],
-          [8, 17, 15, 16, 16, 16, 19, 19, 0, 18, 20], [10, 17, 11, 16, 16, 16, 19, 19, 16, 0, 5],
-          [10, 17, 6, 16, 16, 16, 19, 18, 16, 18, 0]], 92),
-        ([
-             [0, 1, 2, 3, 4, 5, 6, 7, 8],
-             [1, 0, 9, 10, 11, 12, 13, 14, 15],
-             [2, 9, 0, 16, 17, 18, 19, 20, 21],
-             [3, 10, 16, 0, 22, 23, 24, 25, 26],
-             [4, 11, 17, 22, 0, 27, 28, 29, 30],
-             [5, 12, 18, 23, 27, 0, 31, 32, 33],
-             [6, 13, 19, 24, 28, 31, 0, 34, 35],
-             [7, 14, 20, 25, 29, 32, 34, 0, 36],
-             [8, 15, 21, 26, 30, 33, 35, 36, 0]
-         ], 154),
-        ([
-             [0, 1, 2, 3, 4, 5, 6, 7],
-             [1, 0, 8, 9, 10, 11, 12, 13],
-             [2, 8, 0, 14, 15, 16, 17, 18],
-             [3, 9, 14, 0, 19, 20, 21, 22],
-             [4, 10, 15, 19, 0, 23, 24, 25],
-             [5, 11, 16, 20, 23, 0, 26, 27],
-             [6, 12, 17, 21, 24, 26, 0, 28],
-             [7, 13, 18, 22, 25, 27, 28, 0]
-         ], 108),
-    ]:
-        tsp = TSPThreading(tc)
-        y = tsp.run()
+    for tc, expected in testcases:
+        tsp = TSP(tc)
+        y = tsp.travel()
         print(y)
-        # print(tsp.get_path())
 
-        assert expected == y[1]
+        assert expected == y[0]
