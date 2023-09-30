@@ -19,7 +19,7 @@ class TSP:
 
     def __init__(self, weights: List[List[int]]):
         self.weights = weights
-        self.thread_count = os.cpu_count()
+        self.thread_count = min(os.cpu_count(), len(weights))
 
     def travel(self):
         with concurrent.futures.ThreadPoolExecutor(max_workers=self.thread_count) as executor:
@@ -76,10 +76,17 @@ class TSP:
 
 if __name__ == '__main__':
     from testcases import testcases
+    import time
 
     for tc, expected in testcases:
+        start_time = time.time()
         tsp = TSP(tc)
         y = tsp.travel()
-        print(y)
+        print(
+            f'result: {y}\n'
+            f'time taken to process {len(tc)} nodes tsp '
+            f'with {tsp.thread_count} threads: '
+            f'{time.time() - start_time}\n'
+        )
 
         assert expected == y[0]
