@@ -3,94 +3,93 @@
 # Created by panos on 9/28/23
 # IDE: PyCharm
 """
-mpiexec -np 4 python tsp/tsp_mpi.py
+mpiexec -n 4 python -m mpi4py.futures tsp/tsp_mpi2.py
 """
-import concurrent.futures
-import os
+from concurrent.futures import Future
+from functools import partial
 from itertools import permutations
 from typing import List, Tuple
-from mpi4py import MPI
+
+from mpi4py import MPI, futures
 
 
-class TSP:
+def travel(n, mask: int, dp: List[List[Tuple[float, List]]], weights: List[List[int]]) -> List[int]:
     """
-    Travelling Salesman Problem
-    Solve by DP in
-    TC: 2 ** n * n ** 2
-    SC: 2 ** n * n
+    each processor will need the dp of which have bit distance of 1 comparing to mask
+
     """
 
-    def __init__(self, weights: List[List[int]]):
-        self.weights = weights
-        self.thread_count = os.cpu_count()
+    result: list = list(dp[mask])
 
-    def travel(self):
+    nodes_to_be_visited = [j for j in range(n) if mask & (1 << j)]
+    for dest, src in permutations(nodes_to_be_visited, 2):
+        state_dest_not_visited = mask ^ (1 << dest)
+        result[dest] = min(
+            result[dest],
+            (
+                dp[state_dest_not_visited][src][0] + weights[src][dest],
+                dp[state_dest_not_visited][src][1] + [dest]
+            ),
+            key=lambda x: x[0]
+        )
 
-        # comm = MPI.COMM_WORLD
-        # rank = comm.Get_rank()
-        # size = comm.Get_size()
-        #
-        # if rank == 0:
-        #     data = range(10)
-        #     comm.send(data, dest=1, tag=11)
-        #     print("process {} send {}...".format(rank, data))
-        # else:
-        #     data = comm.recv(source=0, tag=11)
-        #     print("process {} recv {}...".format(rank, data))
+    return result
 
-        start_node = 0
-        n = len(self.weights)
-        # dp[state][node]
-        # minimal cost/path given state and previous visited node
-        dp: List[List[Tuple[float, List]]] = [
-            [(float('inf'), [])] * n
-            for _ in range(1 << n)
-        ]
-        for i in range(n):
-            # first node taken
-            # should be after a start node
-            dp[1 << i][i] = (self.weights[start_node][i], [i])
 
-        for mask in range(1 << n):
-            self.helper(n=n, mask=mask, dp=dp)
-
-        return dp[-1][0]
-
-    def helper(self, n, mask: int, dp) -> List[int]:
-        """
-        each processor will need the dp of which have bit distance of 1 comparing to mask
-
-        """
-        result: List[int] = [float('inf')] * n
-        nodes_to_be_visited = [j for j in range(n) if mask & (1 << j)]
-        for dest, src in permutations(nodes_to_be_visited, 2):
-            state_dest_not_visited = mask ^ (1 << dest)
-            dp[mask][dest] = min(
-                dp[mask][dest],
-                (
-                    dp[state_dest_not_visited][src][0] + self.weights[src][dest],
-                    dp[state_dest_not_visited][src][1] + [dest]
-                ),
-                key=lambda x: x[0]
-            )
-
-        # reach to the last node
-        if mask + 1 == 1 << n:
-            for i in range(n):
-                # go back to start node
-                dp[mask][i] = (
-                    dp[-1][i][0] + self.weights[i][0],
-                    dp[-1][i][1]
-                )
-        return result
+def callback(req: Future, mask):
+    dp[mask] = req.result()
 
 
 if __name__ == '__main__':
     from testcases import testcases
+    import time
 
-    for tc, expected in testcases:
-        tsp = TSP(tc)
-        y = tsp.travel()
-        print(y)
+    # init MPI communicator
+    comm = MPI.COMM_WORLD
+    rank = comm.Get_rank()
+    size = comm.Get_size()
+    with futures.MPIPoolExecutor() as executor:
+        for weights, expected in testcases:
+            start_time = time.time()
 
-        assert expected == y[0]
+            start_node = 0
+            n = len(weights)
+            # dp[state][node]
+            # minimal cost/path given state and previous visited node
+            dp: List[List[Tuple[float, List]]] = [
+                [(float('inf'), [])] * n
+                for _ in range(1 << n)
+            ]
+            for i in range(n):
+                # first node taken
+                # should be after a start node
+                dp[1 << i][i] = (weights[start_node][i], [i])
+
+            reqs = []
+            count = 2
+            for mask in range(1, 1 << n):
+                req: Future = executor.submit(
+                    travel,
+                    n=n,
+                    mask=mask,
+                    dp=dp,
+                    weights=weights
+                )
+                req.add_done_callback(partial(callback, mask=mask))
+                reqs.append(req)
+                count -= 1
+                if count <= 0:
+                    futures.wait(reqs)
+                    reqs = []
+                    count = 2
+
+            futures.wait(reqs)
+
+            print(
+                f'\nFinish TSP with result {dp[-1][0]}\n'
+                f'time taken to process {len(weights)} nodes TSP '
+                f'with {size} processor: '
+                f'{time.time() - start_time}\n'
+                f'*****************************************************************************************************'
+            )
+        assert expected == dp[-1][0][0]

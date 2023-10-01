@@ -83,10 +83,11 @@ if __name__ == '__main__':
         tsp = TSP(tc)
         y = tsp.travel()
         print(
-            f'result: {y}\n'
-            f'time taken to process {len(tc)} nodes tsp '
+            f'\nFinish TSP with result {y}\n'
+            f'time taken to process {len(tc)} nodes TSP '
             f'with {tsp.thread_count} threads: '
             f'{time.time() - start_time}\n'
+            f'********************************************************************************************************'
         )
 
         assert expected == y[0]

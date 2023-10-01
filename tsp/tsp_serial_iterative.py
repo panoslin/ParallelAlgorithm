@@ -57,10 +57,18 @@ class TSP:
 
 if __name__ == '__main__':
     from testcases import testcases
+    import time
 
     for tc, expected in testcases:
         tsp = TSP()
+        start_time = time.time()
         y = tsp.travel(tc)
-        print(y)
+
+        print(
+            f'\nFinish TSP with result {y}\n'
+            f'time taken to process {len(tc)} nodes TSP '
+            f'{time.time() - start_time}\n'
+            f'********************************************************************************************************'
+        )
 
         assert expected == y[0]
