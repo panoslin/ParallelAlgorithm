@@ -41,17 +41,17 @@ class TSP:
             state_only_i_visited = 1 << i
             dp[state_only_i_visited][i] = (weights[start_node][i], [i])
 
-        for mask in range(1 << n):
-            nodes_to_be_visited = [j for j in range(n) if mask & (1 << j)]
+        for current_mask in range(1 << n):
+            nodes_to_be_visited = [j for j in range(n) if current_mask & (1 << j)]
 
             # compare all possible permutation of nodes
             for dest, src in permutations(nodes_to_be_visited, 2):
-                state_dest_not_visited = mask ^ (1 << dest)
-                dp[mask][dest] = min(
-                    dp[mask][dest],
+                mask_dest_not_visited = current_mask ^ (1 << dest)
+                dp[current_mask][dest] = min(
+                    dp[current_mask][dest],
                     (
-                        dp[state_dest_not_visited][src][0] + weights[src][dest],
-                        dp[state_dest_not_visited][src][1] + [dest]
+                        dp[mask_dest_not_visited][src][0] + weights[src][dest],
+                        dp[mask_dest_not_visited][src][1] + [dest]
                     ),
                     key=lambda x: x[0]
                 )

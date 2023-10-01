@@ -50,13 +50,16 @@ class TSP:
         if not remaining_nodes:
             return self.weights[prev_node][0]
 
-        # Store the costs in the form (neighbor, dist(neighbor, taken))
+        # Store the costs in the form (neighbor, dist(neighbor, remaining_nodes))
         costs = [
-            (neighbor, self.weights[prev_node][neighbor] + self.dist(neighbor, remaining_nodes.difference({neighbor})))
+            (
+                neighbor,
+                self.weights[prev_node][neighbor] + self.dist(neighbor, remaining_nodes.difference({neighbor}))
+            )
             for neighbor in remaining_nodes
         ]
-        optimal_neighbor, min_cost = min(costs, key=lambda x: x[1])
-        self.path[(prev_node, remaining_nodes)] = optimal_neighbor
+        neighbor_with_min_cost, min_cost = min(costs, key=lambda x: x[1])
+        self.path[(prev_node, remaining_nodes)] = neighbor_with_min_cost
 
         return min_cost
 
