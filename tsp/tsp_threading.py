@@ -19,7 +19,7 @@ class TSP:
 
     def __init__(self, weights: List[List[int]]):
         self.weights = weights
-        self.thread_count = min(os.cpu_count(), len(weights))
+        self.thread_count = 2 ** len(weights)
 
     def travel(self):
         with concurrent.futures.ThreadPoolExecutor(max_workers=self.thread_count) as executor:
