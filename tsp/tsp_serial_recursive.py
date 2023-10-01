@@ -29,34 +29,34 @@ class TSP:
         Returns:
             Tuple[float, List]: A tuple containing the minimal cost and the path.
         """
-        taken = frozenset(range(1, len(weights)))
+        remaining_nodes = frozenset(range(1, len(weights)))
         self.weights = weights
 
         # Step 1: get minimum distance
-        best_distance = self.dist(0, taken)
+        best_distance = self.dist(0, remaining_nodes)
 
         # Step 2: get path with the minimum distance
         current_node = 0  # start at the origin
         best_path = [0]
-        while taken:
-            current_node = self.path[(current_node, taken)]
+        while remaining_nodes:
+            current_node = self.path[(current_node, remaining_nodes)]
             best_path.append(current_node)
-            taken = taken.difference({current_node})
+            remaining_nodes = remaining_nodes.difference({current_node})
 
         return best_distance, best_path
 
     @cache
-    def dist(self, current_node: int, taken: frozenset) -> float:
-        if not taken:
-            return self.weights[current_node][0]
+    def dist(self, prev_node: int, remaining_nodes: frozenset) -> float:
+        if not remaining_nodes:
+            return self.weights[prev_node][0]
 
         # Store the costs in the form (neighbor, dist(neighbor, taken))
         costs = [
-            (neighbor, self.weights[current_node][neighbor] + self.dist(neighbor, taken.difference({neighbor})))
-            for neighbor in taken
+            (neighbor, self.weights[prev_node][neighbor] + self.dist(neighbor, remaining_nodes.difference({neighbor})))
+            for neighbor in remaining_nodes
         ]
         optimal_neighbor, min_cost = min(costs, key=lambda x: x[1])
-        self.path[(current_node, taken)] = optimal_neighbor
+        self.path[(prev_node, remaining_nodes)] = optimal_neighbor
 
         return min_cost
 
