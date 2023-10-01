@@ -25,53 +25,45 @@ class TSP:
         with concurrent.futures.ThreadPoolExecutor(max_workers=self.thread_count) as executor:
             start_node = 0
             n = len(self.weights)
-            # dp[state][node]
-            # minimal cost/path given state and previous visited node
-            dp: List[List[Tuple[float, List]]] = [
+
+            # dp[state][node] representing the minimal cost/path,
+            # visiting all nodes from bit mask `state` and last visited node is `node`
+            dp: List[List[Tuple[float, List[int]]]] = [
                 [(float('inf'), [])] * n
                 for _ in range(1 << n)
             ]
             for i in range(n):
                 # first node taken
-                # should be after a start node
-                dp[1 << i][i] = (self.weights[start_node][i], [i])
+                # should be after the start node
+                state_only_i_visited = 1 << i
+                dp[state_only_i_visited][i] = (self.weights[start_node][i], [i])
 
             # Start the load operations and mark each future with its parameters
             future_to_idx = {
                 executor.submit(
                     self.helper,
-                    n=n,
-                    mask=mask,
+                    current_mask=mask,
                     dp=dp,
-                    start_node=start_node
                 ): mask
                 for mask in range(1 << n)
             }
             concurrent.futures.wait(future_to_idx)
 
-            return dp[-1][0]
+            return dp[(1 << n) - 1][0]
 
-    def helper(self, n, mask, dp, start_node):
-        nodes_to_be_visited = [j for j in range(n) if mask & (1 << j)]
+    def helper(self, current_mask, dp):
+        n = len(self.weights)
+        nodes_to_be_visited = [j for j in range(n) if current_mask & (1 << j)]
         for dest, src in permutations(nodes_to_be_visited, 2):
-            state_dest_not_visited = mask ^ (1 << dest)
-            dp[mask][dest] = min(
-                dp[mask][dest],
+            mask_dest_not_visited = current_mask ^ (1 << dest)
+            dp[current_mask][dest] = min(
+                dp[current_mask][dest],
                 (
-                    dp[state_dest_not_visited][src][0] + self.weights[src][dest],
-                    dp[state_dest_not_visited][src][1] + [dest]
+                    dp[mask_dest_not_visited][src][0] + self.weights[src][dest],
+                    dp[mask_dest_not_visited][src][1] + [dest]
                 ),
                 key=lambda x: x[0]
             )
-
-        # reach to the last node
-        if mask + 1 == 1 << n:
-            for i in range(n):
-                # go back to start node
-                dp[mask][i] = (
-                    dp[-1][i][0] + self.weights[i][start_node],
-                    dp[-1][i][1]
-                )
 
 
 if __name__ == '__main__':
