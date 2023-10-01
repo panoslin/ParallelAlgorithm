@@ -17,21 +17,34 @@ class TSP:
 
     @staticmethod
     def travel(weights: List[List[int]]):
+        """
+        Calculate the minimal cost/path for traveling through all nodes and back to the start node
+
+        Args:
+            weights (List[List[int]]): A 2D list representing the weights between nodes.
+
+        Returns:
+            Tuple[float, List]: A tuple containing the minimal cost and the path.
+        """
         start_node = 0
         n = len(weights)
-        # dp[state][node]
-        # minimal cost/path given state and previous visited node
-        dp: List[List[Tuple[float, List]]] = [
+
+        # dp[state][node] representing the minimal cost/path,
+        # visiting all nodes from bit mask `state` and last visited node is `node`
+        dp: List[List[Tuple[float, List[int]]]] = [
             [(float('inf'), [])] * n
             for _ in range(1 << n)
         ]
         for i in range(n):
             # first node taken
-            # should be after a start node
-            dp[1 << i][i] = (weights[start_node][i], [i])
+            # should be after the start node
+            state_only_i_visited = 1 << i
+            dp[state_only_i_visited][i] = (weights[start_node][i], [i])
 
         for mask in range(1 << n):
             nodes_to_be_visited = [j for j in range(n) if mask & (1 << j)]
+
+            # compare all possible permutation of nodes
             for dest, src in permutations(nodes_to_be_visited, 2):
                 state_dest_not_visited = mask ^ (1 << dest)
                 dp[mask][dest] = min(
@@ -43,16 +56,8 @@ class TSP:
                     key=lambda x: x[0]
                 )
 
-            # reach to the last node
-            if mask + 1 == 1 << n:
-                for i in range(n):
-                    # go back to start node
-                    dp[-1][i] = (
-                        dp[-1][i][0] + weights[i][start_node],
-                        dp[-1][i][1]
-                    )
-
-        return dp[-1][0]
+        # all nodes visited and back to the start node
+        return dp[(1 << n) - 1][0]
 
 
 if __name__ == '__main__':

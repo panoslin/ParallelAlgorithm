@@ -20,6 +20,15 @@ class TSP:
     path: Dict[Tuple, int] = {}
 
     def travel(self, weights: List[List[int]]):
+        """
+        Calculate the minimal cost/path for traveling through all nodes and back to the start node
+
+        Args:
+            weights (List[List[int]]): A 2D list representing the weights between nodes.
+
+        Returns:
+            Tuple[float, List]: A tuple containing the minimal cost and the path.
+        """
         taken = frozenset(range(1, len(weights)))
         self.weights = weights
 
