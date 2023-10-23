@@ -3,7 +3,6 @@
 # Created by panos on 9/28/23
 # IDE: PyCharm
 import concurrent.futures
-import os
 from itertools import permutations
 from typing import List, Tuple
 
