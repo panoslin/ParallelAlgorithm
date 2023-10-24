@@ -6,7 +6,7 @@ import random
 from typing import List
 
 
-def generate(
+def generate_coordinates(
         n: int,
         x_axis_left_bound: int,
         x_axis_right_bound: int,
@@ -39,18 +39,25 @@ def generate_adjacency_matrix(coordinates: List[List[float]]) -> List[List[float
     adjacency_matrix = [[0 for _ in range(len(coordinates))] for _ in range(len(coordinates))]
     for point1_idx in range(len(coordinates)):
         for point2_idx in range(len(coordinates)):
-            distance = (
-                               (coordinates[point1_idx][0] - coordinates[point2_idx][0]) ** 2 +
-                               (coordinates[point1_idx][1] - coordinates[point2_idx][1]) ** 2
-                       ) ** 0.5
+            distance = calculate_distance(coordinates[point1_idx], coordinates[point2_idx])
             adjacency_matrix[point1_idx][point2_idx] = distance
     return adjacency_matrix
+
+
+def calculate_distance(point1: List[float], point2: List[float]) -> float:
+    """
+    calculate distance
+    :param point1:
+    :param point2:
+    :return:
+    """
+    return ((point1[0] - point2[0]) ** 2 + (point1[1] - point2[1]) ** 2) ** 0.5
 
 
 if __name__ == '__main__':
     from pprint import pprint
 
-    _ = generate(4, 0, 1, 0, 1)
+    _ = generate_coordinates(4, 0, 1, 0, 1)
     pprint(_)
     _ = generate_adjacency_matrix(_)
     pprint(_)
