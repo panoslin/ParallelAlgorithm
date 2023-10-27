@@ -6,11 +6,12 @@
 mpiexec -n 4 python -m mpi4py.futures tsp/tsp_mpi.py
 """
 import math
+from concurrent.futures import Future
+from functools import partial
 from itertools import permutations
 from typing import List, Tuple
+
 from mpi4py import MPI, futures
-from functools import partial
-from concurrent.futures import Future
 
 
 def travel(
