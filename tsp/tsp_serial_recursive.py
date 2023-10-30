@@ -46,20 +46,26 @@ class TSP:
         return best_distance, best_path
 
     @cache
-    def dist(self, prev_node: int, remaining_nodes: frozenset) -> float:
+    def dist(self, current_node: int, remaining_nodes: frozenset) -> float:
+        """
+        return min cost from current_node traversing all remaining nodes
+        :param current_node:
+        :param remaining_nodes:
+        :return:
+        """
         if not remaining_nodes:
-            return self.weights[prev_node][0]
+            return self.weights[current_node][0]
 
         # Store the costs in the form (neighbor, dist(neighbor, remaining_nodes))
         costs = [
             (
                 neighbor,
-                self.weights[prev_node][neighbor] + self.dist(neighbor, remaining_nodes.difference({neighbor}))
+                self.weights[current_node][neighbor] + self.dist(neighbor, remaining_nodes.difference({neighbor}))
             )
             for neighbor in remaining_nodes
         ]
         neighbor_with_min_cost, min_cost = min(costs, key=lambda x: x[1])
-        self.path[(prev_node, remaining_nodes)] = neighbor_with_min_cost
+        self.path[(current_node, remaining_nodes)] = neighbor_with_min_cost
 
         return min_cost
 
