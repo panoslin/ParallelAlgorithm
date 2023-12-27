@@ -33,14 +33,11 @@ def compute_tsp(
 
         mask_queue[mask].append((path, cost))
 
-        # indicator of all the cells of the dp column has been filled
-        is_all_subtask_done = len(mask_queue[mask]) == number_visited_node
-
         # all dependent tasks completed
-        if is_all_subtask_done:
+        if len(mask_queue[mask]) == number_visited_node:
             if mask == (1 << node_count) - 2:
                 # send termination message to all processors
-                optimal_cost, optimal_path = find_optimal_path(mask_queue[mask], 0, weights)
+                optimal_cost, optimal_path = find_shortest_path(mask_queue[mask], 0, weights)
                 data[-1] = optimal_cost
                 for i in range(processor_count):
                     data[-2] = -1
@@ -55,7 +52,8 @@ def compute_tsp(
                 if mask & (1 << node) == 0:
                     next_mask = mask | (1 << node)
                     next_processor = (next_mask + 1) // 2 % processor_count
-                    optimal_cost, optimal_path = find_optimal_path(mask_queue[mask], node, weights)
+                    optimal_cost, optimal_path = find_shortest_path(mask_queue[mask], node, weights)
+                    # data[:number_visited_node] = optimal_path
                     data[number_visited_node] = node
                     data[-3] = number_visited_node + 1
                     data[-2] = next_mask
@@ -63,7 +61,7 @@ def compute_tsp(
                     comm.Send([data, MPI.INT], dest=next_processor)
 
 
-def find_optimal_path(exist_path: List[Tuple[List, int]], next_node, weights):
+def find_shortest_path(exist_path: List[Tuple[List, int]], next_node, weights):
     """
     find the path with min total cost from exist path's last node to next_node
     :param exist_path:
@@ -71,11 +69,11 @@ def find_optimal_path(exist_path: List[Tuple[List, int]], next_node, weights):
     :param weights:
     :return:
     """
-    optimal_path, optimal_cost = min(
+    shortest_path, cost = min(
         exist_path,
         key=lambda path_and_cost: path_and_cost[1] + weights[path_and_cost[0][-1]][next_node]
     )
-    return optimal_cost + weights[optimal_path[-1]][next_node], optimal_path + [next_node]
+    return cost + weights[shortest_path[-1]][next_node], shortest_path
 
 
 def deserialize_data(data):
