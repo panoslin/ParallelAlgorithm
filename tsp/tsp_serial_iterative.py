@@ -31,7 +31,7 @@ class TSP:
 
         # dp[state][node] representing the minimal cost/path,
         # visiting all nodes from bit mask `state` and last visited node is `node`
-        dp: List[List[Tuple[float, List[int]]]] = [
+        dp: List[List[Tuple[float: List[int]]]] = [
             [(float('inf'), [])] * n
             for _ in range(1 << n)
         ]
