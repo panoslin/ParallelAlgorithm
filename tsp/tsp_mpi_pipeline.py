@@ -38,10 +38,19 @@ def compute_tsp(
 
         # all dependent tasks completed
         if is_all_subtask_done:
-            start_node = 0 if (mask == (1 << node_count) - 2) else 1
+            if mask == (1 << node_count) - 2:
+                # send termination message to all processors
+                optimal_cost, optimal_path = find_optimal_path(mask_queue[mask], 0, weights)
+                data[-1] = optimal_cost
+                for i in range(processor_count):
+                    data[-2] = -1
+                    comm.Send([data, MPI.INT], dest=i)
+
+                continue
+
             # find the min cost path to each unvisited node
             # according to all the subtasks gathered
-            for node in range(start_node, node_count):
+            for node in range(1, node_count):
                 # not visited node
                 if mask & (1 << node) == 0:
                     next_mask = mask | (1 << node)
@@ -52,12 +61,6 @@ def compute_tsp(
                     data[-2] = next_mask
                     data[-1] = optimal_cost
                     comm.Send([data, MPI.INT], dest=next_processor)
-
-            if start_node == 0:
-                # send termination message to all processors
-                for i in range(processor_count):
-                    data[-2] = -1
-                    comm.Send([data, MPI.INT], dest=i)
 
 
 def find_optimal_path(exist_path: List[Tuple[List, int]], next_node, weights):
