@@ -39,8 +39,8 @@ def compute_tsp(
                 # send termination message to all processors
                 optimal_cost, optimal_path = find_shortest_path(mask_queue[mask], 0, weights)
                 data[-1] = optimal_cost
+                data[-2] = -1
                 for i in range(processor_count):
-                    data[-2] = -1
                     comm.Send([data, MPI.INT], dest=i)
 
                 continue
@@ -53,7 +53,7 @@ def compute_tsp(
                     next_mask = mask | (1 << node)
                     next_processor = (next_mask + 1) // 2 % processor_count
                     optimal_cost, optimal_path = find_shortest_path(mask_queue[mask], node, weights)
-                    # data[:number_visited_node] = optimal_path
+                    data[:number_visited_node] = optimal_path
                     data[number_visited_node] = node
                     data[-3] = number_visited_node + 1
                     data[-2] = next_mask
@@ -89,54 +89,54 @@ def deserialize_data(data):
     return cost, mask, number_visited_node, path
 
 
-def main():
-    from testcases import testcases
-
+def main(weights, expected_cost):
+    start_time = time.time()
     comm = MPI.COMM_WORLD
     rank = comm.Get_rank()
     processor_count = comm.Get_size()
 
-    for weights, expected_cost in testcases:
-        start_time = time.time()
-        if rank == 0:
-            # 1. One to All broadcast: adjacency matrix
-            comm.bcast(weights, root=0)
-            node_count = len(weights)
+    if rank == 0:
+        # 1. One to All broadcast: adjacency matrix
+        comm.bcast(weights, root=0)
+        node_count = len(weights)
 
-            # 2. initiate subtasks: traverse all nodes starting from node 0
-            path = [-1] * node_count
-            number_visited_node = 1
-            for node in range(1, node_count):
-                mask = 1 << node
-                path[0] = node
-                dest_process = (mask + 1) // 2 % processor_count
-                data = np.array(path + [number_visited_node, mask, weights[0][node]], dtype='i')
-                comm.Send([data, MPI.INT], dest=dest_process)
-        else:
-            # 1. recv weights: One to All Broadcast from rank 0
-            weights = comm.bcast(None, root=0)
-            node_count = len(weights)
+        # 2. initiate subtasks: traverse all nodes starting from node 0
+        path = [-1] * node_count
+        number_visited_node = 1
+        for node in range(1, node_count):
+            mask = 1 << node
+            path[0] = node
+            dest_process = (mask + 1) // 2 % processor_count
+            data = np.array(path + [number_visited_node, mask, weights[0][node]], dtype='i')
+            comm.Send([data, MPI.INT], dest=dest_process)
+    else:
+        # 1. recv weights: One to All Broadcast from rank 0
+        weights = comm.bcast(None, root=0)
+        node_count = len(weights)
 
-        # loop compute tsp
-        optimal_cost, optimal_path = compute_tsp(
-            node_count=node_count,
-            weights=weights,
-            processor_count=processor_count,
-            comm=comm,
+    # loop compute tsp
+    optimal_cost, optimal_path = compute_tsp(
+        node_count=node_count,
+        weights=weights,
+        processor_count=processor_count,
+        comm=comm,
+    )
+    if rank == 0:
+        # return final result
+        print(
+            f'*****************************************************************************************************'
+            f'\nFinish TSP with result {optimal_cost}\n'
+            f'time taken to process {len(weights)} nodes TSP '
+            f'with {processor_count} processor: '
+            f'{time.time() - start_time}\n'
+            f'{optimal_path=}\n'
+            f'*****************************************************************************************************'
         )
-        if rank == 0:
-            # return final result
-            print(
-                f'*****************************************************************************************************'
-                f'\nFinish TSP with result {optimal_cost}\n'
-                f'time taken to process {len(weights)} nodes TSP '
-                f'with {processor_count} processor: '
-                f'{time.time() - start_time}\n'
-                f'{optimal_path=}\n'
-                f'*****************************************************************************************************'
-            )
-            assert expected_cost == optimal_cost
+        assert expected_cost == optimal_cost
 
 
 if __name__ == '__main__':
-    main()
+    from testcases import testcases
+
+    for tc in testcases:
+        main(tc[0], tc[1])
