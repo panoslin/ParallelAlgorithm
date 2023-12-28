@@ -69,7 +69,7 @@ The 3<sup>rd</sup> layer represeniting all masks with 2 nodes been visited and n
 
 ...
 
-![4NODE TSP 5](/Users/linguohui/Projects/ParallelAlgorithm/README.assets/4NODE TSP 5.png)
+![4NODE TSP 5](README.assets/4NODE TSP 5.png)
 
 For each iteration, all processors will work on one layer simultaneously.
 
@@ -189,13 +189,13 @@ Similarly for a 5 nodes 4 processors mapping:
 
 	Then the time complexity will be:
 
-	### $$ T_{\text{Computing TSP}} = T_{Bit Mask} * N_{Step} * Layer = n^2(T_{s} + T_{m}n) + n^3 = O(n^3) $$
+	 $$ T_{\text{Computing TSP}} = T_{Bit Mask} * N_{Step} * Layer = n^2(T_{s} + T_{m}n) + n^3 = O(n^3) $$
 
 	
 
-	### $$ T_{\text{p}} = T_{\text{Computing TSP}} + T_{OneToAllBroadcast} + T_{InitialTaskGeneration} $$
+	 $$ T_{\text{p}} = T_{\text{Computing TSP}} + T_{OneToAllBroadcast} + T_{InitialTaskGeneration} $$
 
-	### $$  = n^3 + n^2\log p + n = O(n^3)$$
+	 $$  = n^3 + n^2\log p + n = O(n^3)$$
 
 	
 
@@ -227,23 +227,23 @@ Similarly for a 5 nodes 4 processors mapping:
 
 	
 
-	### $$N_{Average} = {N_{Total Number Of Mask Of All Layers} \over N_{Number Of Layer}} = {2 ^ {n} \ \over n}$$
+	 $$N_{Average} = {N_{Total Number Of Mask Of All Layers} \over N_{Number Of Layer}} = {2 ^ {n} \ \over n}$$
 
 	
 
 	Then each layer will need N<sub>Step</sub> iterations to finish computing all masks:
 
-	### $$ N_{\text{Step}} = {N_{Average} \over p} =  {2^{n} \over np} $$
+	 $$ N_{\text{Step}} = {N_{Average} \over p} =  {2^{n} \over np} $$
 
 	 
 
 	Then for this case the overall time needed will be :
 
-	#### $$ T_{\text{Computing TSP}} = T_{Bit Mask} * N_{Step} * Layer = (n (T_{s} + T_{m} * n) + n^2) * {2^{n} \over np} * n  = {n ^ 2 \cdot 2 ^ {n} \over p} $$
+	 $$ T_{\text{Computing TSP}} = T_{Bit Mask} * N_{Step} * Layer = (n (T_{s} + T_{m} * n) + n^2) * {2^{n} \over np} * n  = {n ^ 2 \cdot 2 ^ {n} \over p} $$
 
-	### $$ T_{\text{p}} = T_{\text{Computing TSP}} + T_{OneToAllBroadcast} + T_{InitialTaskGeneration} $$
+	 $$ T_{\text{p}} = T_{\text{Computing TSP}} + T_{OneToAllBroadcast} + T_{InitialTaskGeneration} $$
 
-	### $$  = {n ^ 2 \cdot 2 ^ {n} \over p} + n^2\log p + n$$
+	 $$  = {n ^ 2 \cdot 2 ^ {n} \over p} + n^2\log p + n$$
 
 
 
@@ -253,13 +253,13 @@ Similarly for a 5 nodes 4 processors mapping:
 
 	**Case 1:  $$p \geq N_{Processor}$$**
 
-	#### $$Speedup = {T_{s} \over T_{p}} = {2 ^ n n ^ 2 \over n ^ 3} = {2 ^ n \over n}$$
+	 $$Speedup = {T_{s} \over T_{p}} = {2 ^ n n ^ 2 \over n ^ 3} = {2 ^ n \over n}$$
 
 	
 
 	**Case 2:  $$p < N_{Processor}$$**
 
-	#### $$Speedup = {T_{s} \over T_{p}} = {n ^ 2 2 ^ n \over {{n ^ 2 2 ^ {n} \over p} + n^2\log p + n}}  = {n ^ 2 2 ^ n \over {{n ^ 2 2 ^ {n} \over p}}} = p$$
+	 $$Speedup = {T_{s} \over T_{p}} = {n ^ 2 2 ^ n \over {{n ^ 2 2 ^ {n} \over p} + n^2\log p + n}}  = {n ^ 2 2 ^ n \over {{n ^ 2 2 ^ {n} \over p}}} = p$$
 
 	
 
@@ -267,13 +267,13 @@ Similarly for a 5 nodes 4 processors mapping:
 
 	**Case 1:  $$p \geq N_{Processor}$$**
 
-	#### $$E = {Speedup \over p} = {2 ^ n \over np}$$
+	 $$E = {Speedup \over p} = {2 ^ n \over np}$$
 
 	
 
 	**Case 2:  $$p < N_{Processor}$$**
 
-	#### $$E = {Speedup \over p} = 1$$
+	 $$E = {Speedup \over p} = 1$$
 
 	
 
